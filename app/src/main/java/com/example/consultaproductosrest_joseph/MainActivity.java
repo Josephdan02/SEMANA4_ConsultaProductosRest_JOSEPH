@@ -3,16 +3,20 @@ package com.example.consultaproductosrest_joseph;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.List;
 import java.util.Locale;
@@ -23,7 +27,7 @@ import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button btnConsultar;
+    private Button btnConsultar, btnAgregar;
     private ProgressBar progressBar;
     private TextView tvStatus;
     private LinearLayout layoutProductos;
@@ -42,11 +46,13 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnConsultar = findViewById(R.id.btnConsultar);
+        btnAgregar = findViewById(R.id.btnAgregar);
         progressBar = findViewById(R.id.progressBar);
         tvStatus = findViewById(R.id.tvStatus);
         layoutProductos = findViewById(R.id.layoutProductos);
 
         btnConsultar.setOnClickListener(v -> consultarProductos());
+        btnAgregar.setOnClickListener(v -> mostrarFormulario(null));
     }
 
     private void consultarProductos() {
@@ -96,8 +102,123 @@ public class MainActivity extends AppCompatActivity {
             tvPrecio.setText(String.format(Locale.getDefault(), "S/ %.2f", p.getPrecio()));
             tvCategoria.setText(traducirCategoria(p.getCategoria()));
 
+            itemView.findViewById(R.id.btnEditar).setOnClickListener(v -> mostrarFormulario(p));
+            itemView.findViewById(R.id.btnEliminar).setOnClickListener(v -> confirmarEliminacion(p));
+
             layoutProductos.addView(itemView);
         }
+    }
+
+    private void mostrarFormulario(Producto p) {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_producto, null);
+        TextInputEditText etNombre = dialogView.findViewById(R.id.etNombre);
+        TextInputEditText etPrecio = dialogView.findViewById(R.id.etPrecio);
+        TextInputEditText etCategoria = dialogView.findViewById(R.id.etCategoria);
+        TextInputEditText etDescripcion = dialogView.findViewById(R.id.etDescripcion);
+        TextInputEditText etImagen = dialogView.findViewById(R.id.etImagen);
+
+        boolean esEdicion = (p != null);
+        if (esEdicion) {
+            etNombre.setText(p.getNombre());
+            etPrecio.setText(String.valueOf(p.getPrecio()));
+            etCategoria.setText(p.getCategoria());
+            etDescripcion.setText(p.getDescription());
+            etImagen.setText(p.getImage());
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(esEdicion ? "Editar Producto" : "Nuevo Producto")
+                .setView(dialogView)
+                .setPositiveButton("Guardar", (dialog, which) -> {
+                    String nombre = etNombre.getText().toString();
+                    double precio = Double.parseDouble(etPrecio.getText().toString().isEmpty() ? "0" : etPrecio.getText().toString());
+                    String categoria = etCategoria.getText().toString();
+                    String descripcion = etDescripcion.getText().toString();
+                    String imagen = etImagen.getText().toString();
+
+                    if (esEdicion) {
+                        p.setNombre(nombre);
+                        p.setPrecio(precio);
+                        p.setCategoria(categoria);
+                        p.setDescription(descripcion);
+                        p.setImage(imagen);
+                        editarProducto(p);
+                    } else {
+                        Producto nuevo = new Producto(0, nombre, precio, categoria, descripcion, imagen);
+                        crearProducto(nuevo);
+                    }
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void crearProducto(Producto p) {
+        progressBar.setVisibility(View.VISIBLE);
+        RetrofitClient.getApiService().crearProducto(p).enqueue(new Callback<Producto>() {
+            @Override
+            public void onResponse(Call<Producto> call, Response<Producto> response) {
+                progressBar.setVisibility(View.GONE);
+                if (response.isSuccessful()) {
+                    Toast.makeText(MainActivity.this, "Producto creado exitosamente (Simulado)", Toast.LENGTH_SHORT).show();
+                    consultarProductos();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Producto> call, Throwable t) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(MainActivity.this, "Error al crear: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void editarProducto(Producto p) {
+        progressBar.setVisibility(View.VISIBLE);
+        RetrofitClient.getApiService().editarProducto(p.getId(), p).enqueue(new Callback<Producto>() {
+            @Override
+            public void onResponse(Call<Producto> call, Response<Producto> response) {
+                progressBar.setVisibility(View.GONE);
+                if (response.isSuccessful()) {
+                    Toast.makeText(MainActivity.this, "Producto actualizado exitosamente (Simulado)", Toast.LENGTH_SHORT).show();
+                    consultarProductos();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Producto> call, Throwable t) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(MainActivity.this, "Error al actualizar: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void confirmarEliminacion(Producto p) {
+        new AlertDialog.Builder(this)
+                .setTitle("Eliminar Producto")
+                .setMessage("¿Estás seguro de eliminar " + p.getNombre() + "?")
+                .setPositiveButton("Eliminar", (dialog, which) -> eliminarProducto(p.getId()))
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void eliminarProducto(int id) {
+        progressBar.setVisibility(View.VISIBLE);
+        RetrofitClient.getApiService().eliminarProducto(id).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                progressBar.setVisibility(View.GONE);
+                if (response.isSuccessful()) {
+                    Toast.makeText(MainActivity.this, "Producto eliminado exitosamente (Simulado)", Toast.LENGTH_SHORT).show();
+                    consultarProductos();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(MainActivity.this, "Error al eliminar: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private String traducirNombre(String nombreOriginal) {

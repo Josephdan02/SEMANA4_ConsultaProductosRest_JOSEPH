@@ -34,6 +34,17 @@
         android:background="@drawable/header_divider" />
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnAgregar"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginLeft="48dp"
+        android:layout_marginRight="48dp"
+        android:text="AGREGAR PRODUCTO"
+        app:cornerRadius="8dp" />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnConsultar"
         style="@style/Widget.Material3.Button"
         android:layout_width="match_parent"

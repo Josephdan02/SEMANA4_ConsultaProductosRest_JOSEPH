@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ConsultaProductosREST_JOSEPH"
+rootProject.name = "SEMANA4_ConsultaProductosRest_JOSEPH"
 include(":app")
  
